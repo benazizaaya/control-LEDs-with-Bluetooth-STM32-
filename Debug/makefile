@@ -5,7 +5,7 @@
 
 -include ../makefile.init
 
-RM := rm -rf
+RM := del /F /Q
 
 # All of the sources participating in the build are defined here
 -include sources.mk
@@ -31,68 +31,60 @@ endif
 OPTIONAL_TOOL_DEPS := \
 $(wildcard ../makefile.defs) \
 $(wildcard ../makefile.init) \
-$(wildcard ../makefile.targets) \
+$(wildcard ../makefile.targets)
 
-
-BUILD_ARTIFACT_NAME := led blink with bt
+BUILD_ARTIFACT_NAME := led_blink_with_bt
 BUILD_ARTIFACT_EXTENSION := elf
 BUILD_ARTIFACT_PREFIX :=
 BUILD_ARTIFACT := $(BUILD_ARTIFACT_PREFIX)$(BUILD_ARTIFACT_NAME)$(if $(BUILD_ARTIFACT_EXTENSION),.$(BUILD_ARTIFACT_EXTENSION),)
-BIN_FILE := $(BUILD_ARTIFACT_PREFIX)$(BUILD_ARTIFACT_NAME).bin
 
-# Add inputs and outputs from these tool invocations to the build variables 
+# Add inputs and outputs from these tool invocations to the build variables
 EXECUTABLES += \
-led\ blink\ with\ bt.elf \
+$(BUILD_ARTIFACT) \
 
 MAP_FILES += \
-led\ blink\ with\ bt.map \
+$(BUILD_ARTIFACT_NAME).map \
 
 SIZE_OUTPUT += \
 default.size.stdout \
 
 OBJDUMP_LIST += \
-led\ blink\ with\ bt.list \
+$(BUILD_ARTIFACT_NAME).list \
+
+BIN_FILE := $(BUILD_ARTIFACT_NAME).bin
 
 # All Target
 all: main-build
 
 # Main-build Target
-main-build: led\ blink\ with\ bt.elf secondary-outputs $(BIN_FILE)
+main-build: $(BUILD_ARTIFACT) secondary-outputs $(BIN_FILE)
 
 # Tool invocations
-led\ blink\ with\ bt.elf led\ blink\ with\ bt.map: $(OBJS) $(USER_OBJS) "C:\Users\lenovo\Desktop\projets\with stm\led blink with bt\STM32F407VGTX_FLASH.ld" makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "led blink with bt.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"C:\Users\lenovo\Desktop\projets\with stm\led blink with bt\STM32F407VGTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="led blink with bt.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+$(BUILD_ARTIFACT): $(OBJS) $(USER_OBJS) $(LINKER_SCRIPT) makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o $(BUILD_ARTIFACT) @objects.list $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T$(LINKER_SCRIPT) --specs=nosys.specs -Wl,-Map=$(BUILD_ARTIFACT_NAME).map -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 
 $(BIN_FILE): $(BUILD_ARTIFACT)
 	arm-none-eabi-objcopy -O binary $(BUILD_ARTIFACT) $(BIN_FILE)
 	@echo 'Generated binary file: $@'
+	@echo ' '
 
 default.size.stdout: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
 	arm-none-eabi-size  $(EXECUTABLES)
 	@echo 'Finished building: $@'
 	@echo ' '
 
-led\ blink\ with\ bt.list: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-objdump -h -S $(EXECUTABLES) > "led blink with bt.list"
+$(BUILD_ARTIFACT_NAME).list: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-objdump -h -S $(EXECUTABLES) > $(BUILD_ARTIFACT_NAME).list
 	@echo 'Finished building: $@'
 	@echo ' '
 
 # Other Targets
 clean:
-	-$(RM) default.size.stdout led\ blink\ with\ bt.elf led\ blink\ with\ bt.list led\ blink\ with\ bt.map led\ blink\ with\ bt.bin
+	-$(RM) default.size.stdout $(BUILD_ARTIFACT) $(BUILD_ARTIFACT_NAME).list $(BUILD_ARTIFACT_NAME).map $(BIN_FILE) $(OBJ_FILES) $(DEP_FILES)
 	-@echo ' '
 
 secondary-outputs: $(SIZE_OUTPUT) $(OBJDUMP_LIST)
 
-fail-specified-linker-script-missing:
-	@echo 'Error: Cannot find the specified linker script. Check the linker settings in the build configuration.'
-	@exit 2
-
-warn-no-linker-script-specified:
-	@echo 'Warning: No linker script specified. Check the linker settings in the build configuration.'
-
-.PHONY: all clean dependents main-build fail-specified-linker-script-missing warn-no-linker-script-specified
-
--include ../makefile.targets
+.PHONY: all clean dependents main-build
